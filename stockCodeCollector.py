@@ -71,8 +71,12 @@ def restructure(filename):
     with open('%s-restructure.txt' % filename[0:-4], 'wb') as f:
         f.write(newForm.encode())
 
+def getAllCodes():
+    filename = collectStockCode("sh")
+    restructure(filename)
+    filename = collectStockCode("sz", '0')
+    restructure(filename)
+    filename = collectStockCode("sz", '3', True)
+    restructure(filename)
 
-filename = collectStockCode("sz", '3',True)
-restructure(filename)
-# filename = collectStockCode("sh")
-# restructure(filename)
+
