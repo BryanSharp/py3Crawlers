@@ -2,7 +2,7 @@ import urllib.request
 import urllib.parse
 import json, time
 from bs4 import BeautifulSoup
-
+# doc:https://www.crummy.com/software/BeautifulSoup/bs4/doc.zh/
 def timeMilli2Date(timeMillis):
     return time.strftime("%Y-%m-%d", time.localtime(timeMillis / 1000))
 
