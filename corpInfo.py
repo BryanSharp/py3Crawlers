@@ -2,18 +2,82 @@ import urllib.request
 import urllib.parse
 import json, time
 from bs4 import BeautifulSoup
+import csv
+
+
 # doc:https://www.crummy.com/software/BeautifulSoup/bs4/doc.zh/
 def timeMilli2Date(timeMillis):
     return time.strftime("%Y-%m-%d", time.localtime(timeMillis / 1000))
 
 
-def collectStockCode():
-    counter = 0
-    index = 0
-    stockMap = {}
-    stockCode = ""
-    url = 'http://gs.amac.org.cn/amac-infodisc/api/pof/manager?rand=0.22292638394801246&page=0&size=130'
+def collectStockCode(keyword, pages=200):
+    url = 'http://gs.amac.org.cn/amac-infodisc/api/pof/manager?rand=0.22292638394801246&page=0&size=%d' % pages
     req = urllib.request.Request(url)
+    fakeHeaders(req)
+    params = json.dumps({'keyword': keyword})
+    params = bytes(params, 'utf8')
+    response = urllib.request.urlopen(req, params)
+    result = response.read().decode('utf8')
+    full_json = json.loads(result)
+    content_arr = full_json["content"]
+    printTitle = False
+    print('总长度%d' % len(content_arr))
+    cvsArrs = []
+    counter = 0
+    corpName = ''
+    for corp in content_arr:
+        corpUrl = 'http://gs.amac.org.cn/amac-infodisc/res/pof/manager/%s' % corp["url"]
+        try:
+            req = urllib.request.Request(corpUrl)
+            fakeHeaders(req)
+            response = urllib.request.urlopen(req)
+        except:
+            print('网络连接出现问题，网址：%s' % corpUrl)
+            continue
+        soup = BeautifulSoup(response.read().decode())
+        titles = soup.find_all(attrs={'class': 'td-title'})
+        contents = soup.find_all(attrs={'class': 'td-content'})
+        firstRow = []
+        if not printTitle:
+            printTitle = True
+            for t in titles:
+                if '机构诚信' in t.text:
+                    continue
+                titleStr = t.text.strip().replace(':', '')
+                firstRow.append(titleStr)
+            cvsArrs.append(firstRow)
+        i = 0
+        row = []
+        for ct in contents:
+            if i == 0:
+                i += 1
+                continue
+            ct = ct.text.strip().replace('\n', '').replace(' ', '').replace('\t', '')
+            if i == 1:
+                ct = ct.split('\xa0')[0]
+                corpName = ct
+            row.append(ct)
+            i += 1
+            if i > 19:
+                break
+        counter += 1
+        print('解析完成第%d条,对应公司：%s' % (counter, corpName))
+        cvsArrs.append(row)
+    write2Csv(cvsArrs, keyword)
+    return
+
+
+def write2Csv(cvsArrs, keyword):
+    # 这里一定要加上encoding属性 不然会造成乱码
+    # csv 文档 ： https://docs.python.org/3/library/csv.html
+    with open('%s.csv' % keyword, "w", newline="", encoding='utf-8') as datacsv:
+        # dialect为打开csv文件的方式，默认是excel，delimiter="\t"参数指写入的时候的分隔符
+        csvWriter = csv.writer(datacsv, dialect="excel")
+        for arr in cvsArrs:
+            csvWriter.writerow(arr)
+
+
+def fakeHeaders(req):
     req.add_header('Host', 'gs.amac.org.cn')
     req.add_header('Origin', 'http://gs.amac.org.cn')
     req.add_header('Accept', 'application/json, text/javascript, */*; q=0.01')
@@ -23,45 +87,10 @@ def collectStockCode():
     req.add_header('Referer', 'http://gs.amac.org.cn/amac-infodisc/res/pof/manager/index.html')
     req.add_header('User-Agent',
                    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/57.0.2987.98 Safari/537.36')
-    req.add_header('Accept-Encoding', 'gzip, deflate')
+    # req.add_header('Accept-Encoding', 'gzip, deflate')
+    # 上面这句如果加上会导致服务器返回gzip内容
     req.add_header('Accept-Language', 'zh-CN,zh;q=0.8,en;q=0.6')
-    params = json.dumps({'keyword': '产业投资'})
-    params = bytes(params, 'utf8')
-    response = urllib.request.urlopen(req, params)
-    print(response.info())
-    result = response.read().decode('utf8')
-    print(result)
-    json_load = json.loads(result)
-    content_arr = json_load["content"]
-    for corp in content_arr:
-        info = "%s\t%s\t%s\t%s\t%s" % (
-            corp["managerName"].replace('<em>','').replace('</em>',''),
-            timeMilli2Date(corp["establishDate"]),
-            timeMilli2Date(corp["registerDate"]),
-            corp["artificialPersonName"],
-            corp["officeAddress"]
-        )
-        corpUrl='http://gs.amac.org.cn/amac-infodisc/res/pof/manager/%s' % corp["url"]
-        req = urllib.request.Request(corpUrl)
-        req.add_header('Host', 'gs.amac.org.cn')
-        req.add_header('Origin', 'http://gs.amac.org.cn')
-        req.add_header('Accept', 'application/json, text/javascript, */*; q=0.01')
-        req.add_header('Connection', 'keep-alive')
-        req.add_header('X-Requested-With', 'XMLHttpRequest')
-        req.add_header('Content-Type', 'application/json')
-        req.add_header('Referer', 'http://gs.amac.org.cn/amac-infodisc/res/pof/manager/index.html')
-        req.add_header('User-Agent',
-                       'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/57.0.2987.98 Safari/537.36')
-        # req.add_header('Accept-Encoding', 'gzip, deflate')
-        req.add_header('Accept-Language', 'zh-CN,zh;q=0.8,en;q=0.6')
-        response = urllib.request.urlopen(req)
-        soup = BeautifulSoup(response.read().decode())
-        print(soup.find_all(attrs={'class':'td-content'}))
-        print(info)
-    print(content_arr)
-    with open('temp.txt', 'wb') as f:
-        f.write(result.encode())
-    return
+
 
 '''
 {
@@ -91,10 +120,7 @@ def collectStockCode():
     "officeCity": "广州市",
     "primaryInvestType": null
 }
-
-
 '''
-
 
 '''POST  HTTP/1.1
 POST /amac-infodisc/api/pof/manager?rand=0.22282638394801246&page=0&size=20 HTTP/1.1
@@ -109,8 +135,12 @@ Content-Type: application/json
 Referer: http://gs.amac.org.cn/amac-infodisc/res/pof/manager/index.html
 Accept-Encoding: gzip, deflate
 Accept-Language: zh-CN,zh;q=0.8,en;q=0.6
-
-
 '''
 
-collectStockCode()
+collectStockCode('股权投资', 2350)
+# collectStockCode('产业投资')
+# with open("infos.csv", "w", newline="",encoding='utf-8') as datacsv:
+#     # dialect为打开csv文件的方式，默认是excel，delimiter="\t"参数指写入的时候的分隔符
+#     csvwriter = csv.writer(datacsv, dialect=("excel"))
+#     # csv文件插入一行数据，把下面列表中的每一项放入一个单元格（可以用循环插入多行）
+#     csvwriter.writerow(['你好', '再见'])
