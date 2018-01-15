@@ -4,42 +4,63 @@ from urllib import request
 import json, time
 from bs4 import BeautifulSoup
 
-
 from html.parser import HTMLParser
 from html.entities import name2codepoint
 
+
+def get_attr(attrs, attrname):
+    for attr in attrs:
+        if attr[0] == attrname:
+            return attr[1]
+    return None
+
+
 class MyHTMLParser(HTMLParser):
-
-
     def __init__(self, convert_charrefs=True):
-        super().__init__( convert_charrefs=True)
+        super().__init__(convert_charrefs=True)
         self.shouldRead = False
 
     def handle_starttag(self, tag, attrs):
-        if tag=='li':
-            self.shouldRead = True
-            print('<%s>' % tag)
+        if tag == 'span':
+            class_name = get_attr(attrs, 'class')
+            if class_name == 'a color':
+                self.shouldRead = True
+            if class_name == 'color':
+                self.shouldRead = True
+        if tag == 'a':
+            href = get_attr(attrs, 'href')
+            if href is None:
+                return
+            if "uin=" in href:
+                self.shouldRead = True
+                print('href:', href)
+        if tag == 'p':
+            class_name = get_attr(attrs, 'class')
+            if class_name == 'lhag':
+                self.shouldRead = True
 
     def handle_endtag(self, tag):
         if self.shouldRead:
             self.shouldRead = False
-            print('</%s>' % tag)
 
     def handle_startendtag(self, tag, attrs):
         return
 
     def handle_data(self, data):
         if self.shouldRead:
-            print(data)
+            print("data:", data)
 
     def handle_comment(self, data):
-        print('<!--', data, '-->')
+        return
 
     def handle_entityref(self, name):
-        print('&%s;' % name)
+        print('handle_entityref:%s' % name)
 
     def handle_charref(self, name):
-        print('&#%s;' % name)
+        print('handle_charref:%s' % name)
+
+    def handle_pi(self, data):
+        print('handle_pi:%s' % data)
 
 
 def collectBeauty():
@@ -66,15 +87,15 @@ def collectBeauty():
     # print(response.info())
     # result = response.read().decode('utf-8')
     # print(result)
-    with request.urlopen('http://nanrenvip.net/find.html') as f:
+    with request.urlopen('http://www.bx58.com/agentPepole.html') as f:
         data = f.read()
         print('Status:', f.status, f.reason)
         for k, v in f.getheaders():
             print('%s: %s' % (k, v))
         resultHtml = data.decode('utf-8')
-        print('Data:', resultHtml)
-        # parser = MyHTMLParser()
-        # parser.feed(resultHtml)
+        # print('Data:', resultHtml)
+        parser = MyHTMLParser()
+        parser.feed(resultHtml)
     return
 
 
