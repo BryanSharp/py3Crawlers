@@ -19,6 +19,7 @@ class MyHTMLParser(HTMLParser):
     def __init__(self, convert_charrefs=True):
         super().__init__(convert_charrefs=True)
         self.shouldRead = False
+        self.shouldReadPhone = False
 
     def handle_starttag(self, tag, attrs):
         if tag == 'span':
@@ -26,7 +27,7 @@ class MyHTMLParser(HTMLParser):
             if class_name == 'a color':
                 self.shouldRead = True
             if class_name == 'color':
-                self.shouldRead = True
+                self.shouldReadPhone = True
         if tag == 'a':
             href = get_attr(attrs, 'href')
             if href is None:
@@ -49,6 +50,9 @@ class MyHTMLParser(HTMLParser):
     def handle_data(self, data):
         if self.shouldRead:
             print("data:", data)
+        if self.shouldReadPhone:
+            print("data:", data)
+            self.shouldReadPhone = False
 
     def handle_comment(self, data):
         return
