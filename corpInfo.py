@@ -14,7 +14,12 @@ def collectStockCode(keyword, pages=200):
     url = 'http://gs.amac.org.cn/amac-infodisc/api/pof/manager?rand=0.22292638394801246&page=0&size=%d' % pages
     req = urllib.request.Request(url)
     fakeHeaders(req)
-    params = json.dumps({'keyword': keyword})
+    params = ''
+    if keyword == '':
+        params = json.dumps({})
+        keyword = '总计'
+    else:
+        params = json.dumps({'keyword': keyword})
     params = bytes(params, 'utf8')
     response = urllib.request.urlopen(req, params)
     result = response.read().decode('utf8')
@@ -137,7 +142,8 @@ Accept-Encoding: gzip, deflate
 Accept-Language: zh-CN,zh;q=0.8,en;q=0.6
 '''
 
-collectStockCode('股权投资', 2350)
+#collectStockCode('股权投资', 2350)
+collectStockCode('', 25)
 # collectStockCode('产业投资')
 # with open("infos.csv", "w", newline="",encoding='utf-8') as datacsv:
 #     # dialect为打开csv文件的方式，默认是excel，delimiter="\t"参数指写入的时候的分隔符
