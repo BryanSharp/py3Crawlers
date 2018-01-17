@@ -91,15 +91,22 @@ def collectBeauty():
     # print(response.info())
     # result = response.read().decode('utf-8')
     # print(result)
-    with request.urlopen('http://www.bx58.com/agentPepole.html') as f:
-        data = f.read()
-        print('Status:', f.status, f.reason)
-        for k, v in f.getheaders():
-            print('%s: %s' % (k, v))
-        resultHtml = data.decode('utf-8')
-        # print('Data:', resultHtml)
-        parser = MyHTMLParser()
-        parser.feed(resultHtml)
+    # gsid 2 4中国平安 6中国人寿 3泰康人寿 1太平洋 2太平 10新华 26华夏 74中信保 19民生 24人民保险 17富德 9友邦
+    gsids = [4, 6, 3, 1, 2, 10, 74, 19, 24, 17, 9]
+    pages = [1, 2]
+    for page in pages:
+        for gid in gsids:
+            url = "http://www.bx58.com/agentPepole.html?cityid=17&gsid=%d" % gid
+            print("访问：", url)
+            with request.urlopen(url) as f:
+                data = f.read()
+                print('Status:', f.status, f.reason)
+                for k, v in f.getheaders():
+                    print('%s: %s' % (k, v))
+                resultHtml = data.decode('utf-8')
+                # print('Data:', resultHtml)
+                parser = MyHTMLParser()
+                parser.feed(resultHtml)
     return
 
 
